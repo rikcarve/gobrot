@@ -4,6 +4,7 @@ import (
 	"image"
 	"log"
 	"os"
+	"sync"
 	"time"
 
 	"gioui.org/app"
@@ -74,31 +75,37 @@ func mandelbrot(minX float64, maxX float64, minY float64, maxY float64, maxItera
 	dx := (maxX - minX) / Width
 	dy := (maxY - minY) / Height
 	yk := minY
+	var waitGroup sync.WaitGroup
 	for y := 0; y < Height; y++ {
+		waitGroup.Add(1)
 		scanY := y * Width
 		xk := minX
-		for x := 0; x < Width; x++ {
-			iteration := 0
-			var xx float64 = 0
-			var yy float64 = 0
-			var valueX float64 = 0
-			var valueY float64 = 0
-			for (iteration < maxIteration) && ((xx + yy) < 4) {
-				valueY = 2.0*valueX*valueY - yk
-				valueX = xx - yy - xk
-				xx = valueX * valueX
-				yy = valueY * valueY
-				iteration += 1
-			}
-			if iteration < maxIteration {
-				pixels[scanY+x] = (uint8)(256 - iteration%256)
-			} else {
-				pixels[scanY+x] = 0
-				//fmt.Println(iteration)
-			}
-			//fmt.Println(pixels)
-			xk += dx
-		}
+		go mandelbrotLine(scanY, dx, dy, xk, yk, maxIteration, pixels, &waitGroup)
 		yk += dy
 	}
+	waitGroup.Wait()
+}
+
+func mandelbrotLine(scanY int, dx float64, dy float64, xk float64, yk float64, maxIteration int, pixels []uint8, waitGroup *sync.WaitGroup) {
+	for x := 0; x < Width; x++ {
+		iteration := 0
+		var xx float64 = 0
+		var yy float64 = 0
+		var valueX float64 = 0
+		var valueY float64 = 0
+		for (iteration < maxIteration) && ((xx + yy) < 4) {
+			valueY = 2.0*valueX*valueY - yk
+			valueX = xx - yy - xk
+			xx = valueX * valueX
+			yy = valueY * valueY
+			iteration += 1
+		}
+		if iteration < maxIteration {
+			pixels[scanY+x] = (uint8)(256 - iteration%256)
+		} else {
+			pixels[scanY+x] = 0
+		}
+		xk += dx
+	}
+	waitGroup.Done()
 }
