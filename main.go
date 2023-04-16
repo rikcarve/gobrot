@@ -31,7 +31,9 @@ func main() {
 }
 
 func run(w *app.Window) error {
+
 	var ops op.Ops
+	r := 0
 	i := 0.0
 	start := time.Now()
 
@@ -53,11 +55,17 @@ func run(w *app.Window) error {
 			}
 			if i < 0.8 {
 				op.InvalidateOp{}.Add(&ops)
+				i += 0.01
 			} else {
 				elapsed := time.Since(start)
 				log.Printf("took %s", elapsed)
+				i = 0.0
+				start = time.Now()
+				r++
 			}
-			i += 0.01
+			if r < 5 {
+				op.InvalidateOp{}.Add(&ops)
+			}
 			drawImage(&ops, &myImage)
 			e.Frame(gtx.Ops)
 		}
